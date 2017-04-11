@@ -89,10 +89,14 @@ type
     function ArticleCommit(ID: TID; const Title,Content: RawUTF8): TMVCAction;
   end;
 
+  TMVCViewsMustacheLang = class(TMVCViewsMustache)
+    procedure Render(methodIndex: Integer; const Context: variant; var View: TMVCView); override;
+  end;
+
 var
   aApplication: TBlogApplication;
 implementation
-
+uses SynMustache, mormoti18n;
 resourcestring
   sErrorInvalidLogin = 'Wrong logging information';
   sErrorNeedValidAuthorSession = 'You need to be logged as a valid Author to perform this action';
@@ -102,18 +106,31 @@ resourcestring
 { TBlogApplication }
 
 procedure TBlogApplication.Start(aServer: TSQLRestServer);
+var
+   LParams: TMVCViewsMustacheParameters;
+   LViews: TMVCViewsMustacheLang;
 begin
   fDefaultData := TLockedDocVariant.Create;
   inherited Start(aServer,TypeInfo(IBlogApplication));
   fHasFTS := aServer.StaticVirtualTable[TSQLArticle]=nil;
   fTagsLookup.Init(RestModel);
-  // publish IBlogApplication using Mustache Views (TMVCRunOnRestServer default)
-  fMainRunner := TMVCRunOnRestServer.Create(Self).
+
+  FillChar(LParams, SizeOf(LParams), 0);
+  // That's key point: check template modification every second
+  LParams.FileTimestampMonitorAfterSeconds := 1;
+  LParams.ExtensionForNotExistingTemplate := '.html';
+  LParams.Helpers := TSynMustache.HelpersGetStandardList;
+  LViews := TMVCViewsMustacheLang.Create(Factory.InterfaceTypeInfo,
+    LParams, aServer.LogClass);
+  LViews.RegisterExpressionHelpers(['MonthToText'],[MonthToText]).
+  RegisterExpressionHelpers(['TagToText'],[TagToText]);
+
+  fMainRunner := TMVCRunOnRestServer.Create(Self, nil,'',LViews).
     SetCache('Default',cacheRootIfNoSession,15).
     SetCache('ArticleView',cacheWithParametersIfNoSession,60);
-  (TMVCRunOnRestServer(fMainRunner).Views as TMVCViewsMustache).
-    RegisterExpressionHelpers(['MonthToText'],[MonthToText]).
-    RegisterExpressionHelpers(['TagToText'],[TagToText]);
+  //(TMVCRunOnRestServer(fMainRunner).Views as TMVCViewsMustache).
+  //  RegisterExpressionHelpers(['MonthToText'],[MonthToText]).
+  //  RegisterExpressionHelpers(['TagToText'],[TagToText]);
   ComputeMinimalData;
   aServer.Cache.SetCache(TSQLAuthor);
   aServer.Cache.SetCache(TSQLArticle);
@@ -449,6 +466,29 @@ begin
           GotoError(result,sErrorWriting);
       end else
         RestModel.Update(Article);
+  end;
+end;
+
+
+
+
+
+{ TMVCViewsMustacheLang }
+
+
+procedure TMVCViewsMustacheLang.Render(methodIndex: Integer;
+  const Context: variant; var View: TMVCView);
+begin
+ View.Content := GetRenderer(methodIndex,View.ContentType).Render(
+    Context,fViewPartials,fViewHelpers,  Language.Translate);
+  if trim(View.Content)='' then
+  with fViews[methodIndex] do begin
+    Locker.Enter;
+    Mustache := nil; // force reload ASAP
+    Locker.Leave;
+    raise EMVCException.CreateUTF8(
+      '%.Render(''%''): Void "%" Template - please put some content!',
+        [self,ShortFileName,FileName]);
   end;
 end;
 

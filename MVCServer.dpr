@@ -28,13 +28,15 @@ uses
   mORMotMVC,
   MVCModel,
   MVCViewModel,
-  MVCAuthorViewModel in 'MVCAuthorViewModel.pas';
+  MVCAuthorViewModel in 'MVCAuthorViewModel.pas',
+  mORMoti18n;
 
 var aModel: TSQLModel;
     aServer: TSQLRestServerDB;
     //aApplication: TBlogApplication;
     aHTTPServer: TSQLHttpServer;
 begin
+  mORMoti18n.SetCurrentLanguage('GR');
   aModel := CreateModel;
   try
     aServer := TSQLRestServerDB.Create(aModel,ChangeFileExt(ExeVersion.ProgramFileName,'.db'));
