@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{4584F16F-ACE7-4646-94E8-71037844C686}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="HashProject.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="MVCServer.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="HashProject">
+        <MSBuild Projects="HashProject.dproj"/>
+    </Target>
+    <Target Name="HashProject:Clean">
+        <MSBuild Projects="HashProject.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="HashProject:Make">
+        <MSBuild Projects="HashProject.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MVCServer">
+        <MSBuild Projects="MVCServer.dproj"/>
+    </Target>
+    <Target Name="MVCServer:Clean">
+        <MSBuild Projects="MVCServer.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MVCServer:Make">
+        <MSBuild Projects="MVCServer.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="HashProject;MVCServer"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="HashProject:Clean;MVCServer:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="HashProject:Make;MVCServer:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
